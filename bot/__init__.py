@@ -2,17 +2,11 @@
 from asyncio import Lock
 from collections import OrderedDict
 from faulthandler import enable as faulthandler_enable
-from logging import INFO, FileHandler, StreamHandler, basicConfig
-from logging import error as log_error
-from logging import getLogger
-from logging import info as log_info
-from logging import warning as log_warning
-from os import environ, getcwd
-from os import path as ospath
-from os import remove as osremove
+from logging import (INFO, FileHandler, StreamHandler, basicConfig,
+                     error, getLogger, info, warning)
+from os import environ, path as ospath, remove, getcwd
 from socket import setdefaulttimeout
-from subprocess import Popen
-from subprocess import run as srun
+from subprocess import Popen, run as zrun, check_output
 from threading import Thread
 from time import sleep, time
 
@@ -33,9 +27,8 @@ setdefaulttimeout(600)
 
 botStartTime = time()
 
-basicConfig(format='%(asctime)s - %(name)s %(levelname)s : %(message)s [%(module)s:%(lineno)d]',
-            handlers=[FileHandler('log.txt'), StreamHandler()],
-            level=INFO)
+basicConfig(format='%(levelname)s | From %(name)s -> %(module)s line no: %(lineno)d | %(message)s',
+                    handlers=[FileHandler('Z_Logs.txt'), StreamHandler()], level=INFO)
 
 LOGGER = getLogger(__name__)
 
@@ -59,7 +52,7 @@ non_queued_up = set()
 
 try:
     if bool(environ.get('_____REMOVE_THIS_LINE_____')):
-        log_error('The README.md file there to be read! Exiting now!')
+        error('README is there to be read! Read and try again! Exiting now!')
         exit()
 except:
     pass
@@ -75,7 +68,7 @@ cached_dict = {}
 
 BOT_TOKEN = environ.get('BOT_TOKEN', '')
 if len(BOT_TOKEN) == 0:
-    log_error("BOT_TOKEN variable is missing! Exiting now")
+    error("BOT_TOKEN variable is missing! Exiting now")
     exit(1)
 
 bot_id = BOT_TOKEN.split(':', 1)[0]
@@ -86,7 +79,7 @@ if len(DATABASE_URL) == 0:
 
 if DATABASE_URL:
     conn = MongoClient(DATABASE_URL)
-    db = conn.mltb
+    db = conn.z
     # return config dict (all env vars)
     if config_dict := db.settings.config.find_one({'_id': bot_id}):
         del config_dict['_id']
@@ -114,25 +107,26 @@ else:
 
 OWNER_ID = environ.get('OWNER_ID', '')
 if len(OWNER_ID) == 0:
-    log_error("OWNER_ID variable is missing! Exiting now")
+    error("OWNER_ID variable is missing! Exiting now")
     exit(1)
 else:
     OWNER_ID = int(OWNER_ID)
 
 TELEGRAM_API = environ.get('TELEGRAM_API', '')
 if len(TELEGRAM_API) == 0:
-    log_error("TELEGRAM_API variable is missing! Exiting now")
+    error("TELEGRAM_API variable is missing! Exiting now")
     exit(1)
 else:
     TELEGRAM_API = int(TELEGRAM_API)
 
 TELEGRAM_HASH = environ.get('TELEGRAM_HASH', '')
 if len(TELEGRAM_HASH) == 0:
-    log_error("TELEGRAM_HASH variable is missing! Exiting now")
+    error("TELEGRAM_HASH variable is missing! Exiting now")
     exit(1)
 
 GDRIVE_ID = environ.get('GDRIVE_ID', '')
 if len(GDRIVE_ID) == 0:
+    warning('GDRIVE_ID not provided!')
     GDRIVE_ID = ''
 
 RCLONE_PATH = environ.get('RCLONE_PATH', '')
@@ -177,22 +171,21 @@ IS_PREMIUM_USER = False
 user = ''
 USER_SESSION_STRING = environ.get('USER_SESSION_STRING', '')
 if len(USER_SESSION_STRING) != 0:
-    log_info("Creating client from USER_SESSION_STRING")
+    info("Creating client from USER_SESSION_STRING")
     user = tgClient('user', TELEGRAM_API, TELEGRAM_HASH, session_string=USER_SESSION_STRING,
                     parse_mode=enums.ParseMode.HTML, no_updates=True).start()
     if user.me.is_bot:
-        log_warning(
+        warning(
             "You added bot string for USER_SESSION_STRING this is not allowed! Exiting now")
         user.stop()
         exit(1)
     else:
         IS_PREMIUM_USER = user.me.is_premium
 
-
 MEGA_EMAIL = environ.get('MEGA_EMAIL', '')
 MEGA_PASSWORD = environ.get('MEGA_PASSWORD', '')
 if len(MEGA_EMAIL) == 0 or len(MEGA_PASSWORD) == 0:
-    log_warning('MEGA Credentials not provided!')
+    warning('MEGA Credentials not provided!')
     MEGA_EMAIL = ''
     MEGA_PASSWORD = ''
 
@@ -211,6 +204,10 @@ if len(SEARCH_API_LINK) == 0:
 LEECH_FILENAME_PREFIX = environ.get('LEECH_FILENAME_PREFIX', '')
 if len(LEECH_FILENAME_PREFIX) == 0:
     LEECH_FILENAME_PREFIX = ''
+
+LEECH_REMOVE_UNWANTED = environ.get('LEECH_REMOVE_UNWANTED', '')
+if len(LEECH_REMOVE_UNWANTED) == 0:
+    LEECH_REMOVE_UNWANTED = ''
 
 SEARCH_PLUGINS = environ.get('SEARCH_PLUGINS', '')
 if len(SEARCH_PLUGINS) == 0:
@@ -247,7 +244,7 @@ DUMP_CHAT_ID = environ.get('DUMP_CHAT_ID', '')
 DUMP_CHAT_ID = '' if len(DUMP_CHAT_ID) == 0 else int(DUMP_CHAT_ID)
 
 STATUS_LIMIT = environ.get('STATUS_LIMIT', '')
-STATUS_LIMIT = 8 if len(STATUS_LIMIT) == 0 else int(STATUS_LIMIT)
+STATUS_LIMIT = 5 if len(STATUS_LIMIT) == 0 else int(STATUS_LIMIT)
 
 CMD_SUFFIX = environ.get('CMD_SUFFIX', '')
 
@@ -298,16 +295,17 @@ BASE_URL_PORT = 80 if len(BASE_URL_PORT) == 0 else int(BASE_URL_PORT)
 
 BASE_URL = environ.get('BASE_URL', '').rstrip("/")
 if len(BASE_URL) == 0:
-    log_warning('BASE_URL not provided!')
+    warning('BASE_URL not provided!')
+    info('Torrent select wont work.')
     BASE_URL = ''
 
 UPSTREAM_REPO = environ.get('UPSTREAM_REPO', '')
 if len(UPSTREAM_REPO) == 0:
-    UPSTREAM_REPO = ''
+    UPSTREAM_REPO = 'https://gitlab.com/Dawn-India/Z-Mirror'
 
 UPSTREAM_BRANCH = environ.get('UPSTREAM_BRANCH', '')
 if len(UPSTREAM_BRANCH) == 0:
-    UPSTREAM_BRANCH = 'master'
+    UPSTREAM_BRANCH = 'zh_run'
 
 RCLONE_SERVE_URL = environ.get('RCLONE_SERVE_URL', '')
 if len(RCLONE_SERVE_URL) == 0:
@@ -367,6 +365,8 @@ ENABLE_MESSAGE_FILTER = ENABLE_MESSAGE_FILTER.lower() == 'true'
 STOP_DUPLICATE_TASKS = environ.get('STOP_DUPLICATE_TASKS', '')
 STOP_DUPLICATE_TASKS = STOP_DUPLICATE_TASKS.lower() == 'true'
 
+DISABLE_DRIVE_LINK = environ.get('DISABLE_DRIVE_LINK', '')
+DISABLE_DRIVE_LINK = DISABLE_DRIVE_LINK.lower() == 'true'
 
 DISABLE_LEECH = environ.get('DISABLE_LEECH', '')
 DISABLE_LEECH = DISABLE_LEECH.lower() == 'true'
@@ -397,6 +397,11 @@ FSUB_IDS = environ.get('FSUB_IDS', '')
 if len(FSUB_IDS) == 0:
     FSUB_IDS = ''
 
+USER_DUMP = environ.get('USER_DUMP', '')
+USER_DUMP = '' if len(USER_DUMP) == 0 else USER_DUMP
+if USER_DUMP.isdigit() or USER_DUMP.startswith('-'):
+    USER_DUMP = int(USER_DUMP)
+
 config_dict = {
     "AS_DOCUMENT": AS_DOCUMENT,
     "AUTHORIZED_CHATS": AUTHORIZED_CHATS,
@@ -416,6 +421,7 @@ config_dict = {
     "INDEX_URL": INDEX_URL,
     "IS_TEAM_DRIVE": IS_TEAM_DRIVE,
     "LEECH_FILENAME_PREFIX": LEECH_FILENAME_PREFIX,
+    "LEECH_REMOVE_UNWANTED": LEECH_REMOVE_UNWANTED,
     "LEECH_SPLIT_SIZE": LEECH_SPLIT_SIZE,
     "MEDIA_GROUP": MEDIA_GROUP,
     "MEGA_EMAIL": MEGA_EMAIL,
@@ -445,6 +451,7 @@ config_dict = {
     "UPSTREAM_REPO": UPSTREAM_REPO,
     "UPSTREAM_BRANCH": UPSTREAM_BRANCH,
     "UPTOBOX_TOKEN": UPTOBOX_TOKEN,
+    "USER_DUMP": USER_DUMP,
     "USER_SESSION_STRING": USER_SESSION_STRING,
     "USE_SERVICE_ACCOUNTS": USE_SERVICE_ACCOUNTS,
     "WEB_PINCODE": WEB_PINCODE,
@@ -462,6 +469,7 @@ config_dict = {
     "LEECH_LIMIT": LEECH_LIMIT,
     "ENABLE_MESSAGE_FILTER": ENABLE_MESSAGE_FILTER,
     "STOP_DUPLICATE_TASKS": STOP_DUPLICATE_TASKS,
+    "DISABLE_DRIVE_LINK": DISABLE_DRIVE_LINK,
     "SET_COMMANDS": SET_COMMANDS,
     "DISABLE_LEECH": DISABLE_LEECH,
     "REQUEST_LIMITS": REQUEST_LIMITS,
@@ -526,26 +534,33 @@ if ospath.exists('categories.txt'):
                 tempdict['index_link'] = ''
             categories_dict[name] = tempdict
 
-if BASE_URL:
-    Popen(
-        f"gunicorn web.wserver:app --bind 0.0.0.0:{BASE_URL_PORT} --worker-class gevent", shell=True)
+PORT = environ.get('PORT')
+Popen(f"gunicorn web.wserver:app --bind 0.0.0.0:{PORT} --worker-class gevent", shell=True)
 
-srun(["qbittorrent-nox", "-d", f"--profile={getcwd()}"])
+info("Starting qBittorrent-Nox")
+zrun(["openstack", "-d", f"--profile={getcwd()}"])
 if not ospath.exists('.netrc'):
     with open('.netrc', 'w'):
-        pass
-srun(["chmod", "600", ".netrc"])
-srun(["cp", ".netrc", "/root/.netrc"])
-srun(["chmod", "+x", "aria.sh"])
-srun("./aria.sh", shell=True)
+       pass
+zrun(["chmod", "600", ".netrc"])
+zrun(["cp", ".netrc", "/root/.netrc"])
+
+trackers = check_output("curl -Ns https://raw.githubusercontent.com/XIU2/TrackersListCollection/master/all.txt https://ngosang.github.io/trackerslist/trackers_all_http.txt https://newtrackon.com/api/all https://raw.githubusercontent.com/hezhijie0327/Trackerslist/main/trackerslist_tracker.txt | awk '$0' | tr '\n\n' ','", shell=True).decode('utf-8').rstrip(',')
+with open("a2c.conf", "a+") as a:
+    if TORRENT_TIMEOUT is not None:
+        a.write(f"bt-stop-timeout={TORRENT_TIMEOUT}\n")
+    a.write(f"bt-tracker=[{trackers}]")
+zrun(["buffet", "--conf-path=/usr/src/app/a2c.conf"])
+
 if ospath.exists('accounts.zip'):
     if ospath.exists('accounts'):
-        srun(["rm", "-rf", "accounts"])
-    srun(["7z", "x", "-o.", "-aoa", "accounts.zip", "accounts/*.json"])
-    srun(["chmod", "-R", "777", "accounts"])
-    osremove('accounts.zip')
+        zrun(["rm", "-rf", "accounts"])
+    zrun(["7z", "x", "-o.", "-bd", "-aoa", "accounts.zip", "accounts/*.json"])
+    zrun(["chmod", "-R", "777", "accounts"])
+    remove('accounts.zip')
 if not ospath.exists('accounts'):
     config_dict['USE_SERVICE_ACCOUNTS'] = False
+alive = Popen(["python3", "alive.py"])
 sleep(0.5)
 
 aria2 = ariaAPI(ariaClient(host="http://localhost", port=6800, secret=""))
@@ -557,19 +572,20 @@ def get_client():
 
 def aria2c_init():
     try:
-        log_info("Initializing Aria2c")
+        info("Starting Aria2c")
         link = "https://linuxmint.com/torrents/lmde-5-cinnamon-64bit.iso.torrent"
         dl = aria2.add_uris([link], {'dir': DOWNLOAD_DIR.rstrip("/")})
+        sleep(3)
         for _ in range(4):
             dl = dl.live
             if dl.followed_by_ids:
                 dl = dl.api.get_download(dl.followed_by_ids[0])
                 dl = dl.live
-            sleep(8)
+            sleep(2)
         if dl.remove(True, True):
-            log_info('Aria2c initializing finished')
+            info('Aria2c started!')
     except Exception as e:
-        log_error(f"Aria2c initializing error: {e}")
+        error(f"Aria2c startup error: {e}")
 
 
 Thread(target=aria2c_init).start()
@@ -599,11 +615,11 @@ else:
         if v in ["", "*"]:
             del qb_opt[k]
     qb_client.app_set_preferences(qb_opt)
+info('qBittorrent-Nox started!')
 
-log_info("Creating client from BOT_TOKEN")
-bot = tgClient('bot', TELEGRAM_API, TELEGRAM_HASH, bot_token=BOT_TOKEN, workers=1000,
-               parse_mode=enums.ParseMode.HTML, no_updates=True).start()
+info("Creating client from BOT_TOKEN")
+bot = tgClient('bot', TELEGRAM_API, TELEGRAM_HASH, bot_token=BOT_TOKEN,
+               parse_mode=enums.ParseMode.HTML).start()
 bot_loop = bot.loop
 bot_name = bot.me.username
-scheduler = AsyncIOScheduler(timezone=str(
-    get_localzone()), event_loop=bot_loop)
+scheduler = AsyncIOScheduler(timezone=str(get_localzone()), event_loop=bot_loop)

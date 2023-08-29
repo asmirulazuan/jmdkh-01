@@ -443,6 +443,7 @@ async def load_config():
         "BOT_TOKEN": BOT_TOKEN,
         "CMD_SUFFIX": CMD_SUFFIX,
         "DATABASE_URL": DATABASE_URL,
+        "DEBRID_API_KEY": DEBRID_API_KEY,
         "DEFAULT_UPLOAD": DEFAULT_UPLOAD,
         "DOWNLOAD_DIR": DOWNLOAD_DIR,
         "DUMP_CHAT_ID": DUMP_CHAT_ID,

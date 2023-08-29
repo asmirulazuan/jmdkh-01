@@ -126,6 +126,18 @@ def direct_link_generator(link: str):
             f'No Direct link function found for {link}')
 
 
+def debrid_extractor(url: str) -> str:
+    """ Debrid Link Extractor (VPN Must)"""
+    cget = create_scraper().request
+    try:
+        resp = cget('POST', f"https://api.real-debrid.com/rest/1.0/unrestrict/link?auth_token={config_dict['DEBRID_API_KEY']}", data={'link': url})
+        if resp.status_code == 200:
+            return resp.json()['download']
+        else:
+            raise DirectDownloadLinkException(f"ERROR: {resp['error']}")
+    except Exception as e:
+        raise DirectDownloadLinkException(f"ERROR: {e.__class__.__name__}")
+
 def yandex_disk(url: str) -> str:
     """ Yandex.Disk direct link generator
     Based on https://github.com/wldhx/yadisk-direct """

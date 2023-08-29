@@ -200,6 +200,10 @@ UPTOBOX_TOKEN = environ.get('UPTOBOX_TOKEN', '')
 if len(UPTOBOX_TOKEN) == 0:
     UPTOBOX_TOKEN = ''
 
+DEBRID_API_KEY = environ.get('DEBRID_API_KEY', '')
+if len(DEBRID_API_KEY) == 0:
+    DEBRID_API_KEY = ''
+
 INDEX_URL = environ.get('INDEX_URL', '').rstrip("/")
 if len(INDEX_URL) == 0:
     INDEX_URL = ''
